@@ -1,0 +1,63 @@
+version: "3"
+services:
+  redis:
+    container_name: redis
+    image: redis
+    ports:
+      - "6379:6379"
+    # restart: always
+    networks:
+      - my_network
+
+  db:
+    container_name: postgres
+    build: ./db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=mypassword
+      - POSTGRES_DB=zadanie3
+      - POSTGRES_USER=admin
+    # restart: always
+    networks:
+      - my_network
+
+  myapp:
+    container_name: express_app
+    build: ./app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - redis
+      - db
+    # restart: always
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_PASSWORD=mypassword
+      - POSTGRES_USER=admin
+      - POSTGRES_DB=zadanie3
+    networks:
+      - my_network
+
+  nginx:
+    container_name: nginx
+    build: ./nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - myapp
+    # restart: always
+    environment:
+      - APP_HOST=express_app
+      - APP_PORT=3000
+    command: /bin/bash -c "envsubst < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
+    networks:
+      - my_network
+
+networks:
+  my_network:
+    external: false
+    name: my_network
